@@ -1,5 +1,5 @@
 streamlit
 pandas
-geopandas
 openpyxl
-shapely
+geopandas==0.13.2
+shapely==2.0.1
