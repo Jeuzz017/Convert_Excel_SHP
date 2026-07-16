@@ -1,27 +1,35 @@
 import streamlit as st
-import pandas as pd
 import geopandas as gpd
-from shapely.geometry import Point
-import os
+import pandas as pd
+import io
+import zipfile
 
 st.title("Aplikasi Konversi Excel ke Shapefile")
 
-# Upload file Excel
-file = st.file_uploader("Upload file Excel Anda", type=["xlsx"])
+file = st.file_uploader("Upload file Excel", type=["xlsx"])
 
 if file:
     df = pd.read_excel(file)
-    st.write("Data Anda:", df.head())
-    
-    # Pilih kolom koordinat
     lat_col = st.selectbox("Pilih kolom Latitude:", df.columns)
     lon_col = st.selectbox("Pilih kolom Longitude:", df.columns)
-    
+
     if st.button("Proses ke Shapefile"):
-        # Konversi ke Geopandas
+        # 1. Konversi ke GeoDataFrame
         gdf = gpd.GeoDataFrame(
             df, geometry=gpd.points_from_xy(df[lon_col], df[lat_col]), crs="EPSG:4326"
         )
-        # Simpan sementara
-        gdf.to_file("output.shp")
-        st.success("Konversi berhasil! File tersedia.")
+
+        # 2. Simpan ke buffer ZIP (agar bisa didownload sebagai satu kesatuan)
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            # Menyimpan file ke dalam memori zip
+            gdf.to_file(zf.open("output.shp", "w"), driver="ESRI Shapefile")
+        
+        # 3. Tampilkan Tombol Unduh
+        st.download_button(
+            label="Klik untuk Download Shapefile (ZIP)",
+            data=zip_buffer.getvalue(),
+            file_name="data_spasial.zip",
+            mime="application/zip"
+        )
+        st.success("Data siap diunduh!")
